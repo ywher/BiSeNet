@@ -18,8 +18,12 @@ def get_argparse():
     return args.parse_args()
 
 def generate_dataset_txt(dataset, data_path, image_folder, image_suffix, label_folder, label_suffix, split):
-    image_abs_path = osp.join(data_path, image_folder, split)
-    label_abs_path = osp.join(data_path, label_folder, split)
+    print("Current working directory:", os.getcwd())
+    print("File path:", __file__)
+    work_root = osp.abspath(osp.dirname(osp.dirname(__file__)))
+    print(f'work root: {work_root}')
+    image_abs_path = osp.join(work_root, data_path, image_folder, split)
+    label_abs_path = osp.join(work_root, data_path, label_folder, split)
     
     image_names = os.listdir(image_abs_path)
     label_names = os.listdir(label_abs_path)

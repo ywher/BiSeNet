@@ -1,16 +1,16 @@
 
 cfg = dict(
     model_type='bisenetv1',
-    n_cats=7,
+    n_cats=15,
     num_aux_heads=2,
     lr_start=1e-2,
     weight_decay=5e-4,
     warmup_iters=1000,
     max_iter=20000,  # 80000
-    dataset='Bev',
-    im_root='./datasets/bev_20234_1024',
-    train_im_anns='./datasets/bev_20234_1024/train.txt',
-    val_im_anns='./datasets/bev_20234_1024/val.txt',
+    dataset='HYRoad',
+    im_root='./datasets/HYRoad',
+    train_im_anns='./datasets/HYRoad/train.txt',
+    val_im_anns='./datasets/HYRoad/val.txt',
     scales=[0.75, 2.],
     cropsize=[1024, 1024],  # [512, 512]
     eval_crop=[1024, 1024],  # [512, 512]
@@ -19,5 +19,5 @@ cfg = dict(
     eval_ims_per_gpu=2,
     use_fp16=True,
     use_sync_bn=False,
-    respth='./res/bev_20234_1024_2witers',
+    respth='./res/HYRoad_2witers',
 )
