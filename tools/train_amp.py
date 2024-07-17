@@ -201,7 +201,7 @@ def main():
     torch.cuda.set_device(local_rank)
     dist.init_process_group(backend='nccl')
 
-    if not osp.exists(cfg.respth): os.makedirs(cfg.respth)
+    if not osp.exists(cfg.respth): os.makedirs(cfg.respth, exist_ok=True)
     setup_logger(f'{cfg.model_type}-{cfg.dataset.lower()}-train', cfg.respth)
     train()
 
