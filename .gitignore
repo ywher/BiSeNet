@@ -12,13 +12,13 @@ datasets/*.jpg
 datasets/*.jpeg
 datasets/*.json
 
-datasets/bev_2024/image/*
-datasets/bev_2024/label/*
-datasets/bev_2024/label_color/*
+datasets/bev_2024/image
+datasets/bev_2024/label
+datasets/bev_2024/label_color
 
-datasets/bev_20234_1024/image/*
-datasets/bev_20234_1024/label/*
-datasets/bev_20234_1024/label_color/*
+datasets/bev_20234_1024/image
+datasets/bev_20234_1024/label
+datasets/bev_20234_1024/label_color
 
 datasets/cityscapes/leftImg8bit/*
 datasets/cityscapes/gtFine/*
