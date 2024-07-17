@@ -4,6 +4,8 @@ import os.path as osp
 import argparse
 from tqdm import tqdm
 
+os.chdir(osp.abspath(osp.dirname(osp.dirname(__file__))))
+
 import cv2
 import numpy as np
 

@@ -6,6 +6,20 @@ __pycache__/
 # C extensions
 *.so
 
+# dataset
+datasets/bev_2024/image/*
+datasets/bev_2024/label/*
+datasets/bev_2024/label_color/*
+
+datasets/bev_2024/leftImg8bit/*
+datasets/bev_2024/gtFine/*
+
+datasets/coco/images
+datasets/coco/labels
+
+datasets/ade20k/images
+datasets/ade20k/annotations
+
 # Distribution / packaging
 .Python
 build/
