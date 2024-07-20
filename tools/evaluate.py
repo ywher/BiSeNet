@@ -372,7 +372,7 @@ def print_res_table(tname, heads, weights, metric, cat_metric, class_names=None)
 
 
 @torch.no_grad()
-def eval_model(cfg, net, save_pred):
+def eval_model(cfg, net, save_pred=False):
     org_aux = net.aux_mode
     net.aux_mode = 'eval'
     net.eval()
