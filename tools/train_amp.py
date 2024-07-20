@@ -182,6 +182,7 @@ def train():
             logger.info('\nevaluating the final model')
             # torch.cuda.empty_cache()
             iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net.module)
+            net.module.train()
             logger.info('\neval results of f1 score metric:')
             logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
             logger.info('\neval results of miou metric:')
