@@ -46,12 +46,12 @@ from lib.data.base_dataset import BaseDataset
 
 class CocoStuff(BaseDataset):
 
-    def __init__(self, dataroot, annpath, trans_func=None, mode='train'):
+    def __init__(self, dataroot, annpath, trans_func=None, mode='train', norm={'mean':(0.46962251, 0.4464104,  0.40718787), 'std':(0.27469736, 0.27012361, 0.28515933)}, return_img_name=False):
         super(CocoStuff, self).__init__(
-                dataroot, annpath, trans_func, mode)
+                dataroot, annpath, trans_func, mode, norm, return_img_name)
         self.n_cats = 171 # 91 stuff, 91 thing, 11 of thing have no annos
         self.lb_ignore = 255
-
+        self.norm_cfg = norm
         ## label mapping, remove non-existing labels
         missing = [11, 25, 28, 29, 44, 65, 67, 68, 70, 82, 90]
         remain = [ind for ind in range(182) if not ind in missing]
@@ -60,8 +60,8 @@ class CocoStuff(BaseDataset):
             self.lb_map[ind] = remain.index(ind)
 
         self.to_tensor = T.ToTensor(
-            mean=(0.46962251, 0.4464104,  0.40718787), # coco, rgb
-            std=(0.27469736, 0.27012361, 0.28515933),
+            mean=self.norm_cfg['mean'], # coco, rgb
+            std=self.norm_cfg['std'],
         )
 
 

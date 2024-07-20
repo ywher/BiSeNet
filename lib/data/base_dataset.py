@@ -17,7 +17,7 @@ import numpy as np
 class BaseDataset(Dataset):
     '''
     '''
-    def __init__(self, dataroot, annpath, trans_func=None, mode='train'):
+    def __init__(self, dataroot, annpath, trans_func=None, mode='train', norm={'mean':(0.3257, 0.3690, 0.3223), 'std':(0.2112, 0.2148, 0.2115)}, return_img_name=False):
         super(BaseDataset, self).__init__()
         assert mode in ('train', 'val', 'test')
         self.mode = mode
@@ -25,6 +25,7 @@ class BaseDataset(Dataset):
 
         self.lb_ignore = -100
         self.lb_map = None
+        self.norm_cfg = norm
 
         with open(annpath, 'r') as fr:
             pairs = fr.read().splitlines()
@@ -36,6 +37,7 @@ class BaseDataset(Dataset):
 
         assert len(self.img_paths) == len(self.lb_paths)
         self.len = len(self.img_paths)
+        self.return_img_name = return_img_name
 
     def __getitem__(self, idx):
         impth, lbpth = self.img_paths[idx], self.lb_paths[idx]
@@ -47,7 +49,12 @@ class BaseDataset(Dataset):
             im_lb = self.trans_func(im_lb)
         im_lb = self.to_tensor(im_lb)
         img, label = im_lb['im'], im_lb['lb']
-        return img.detach(), label.unsqueeze(0).detach()
+        
+        if self.return_img_name:
+            img_name = os.path.basename(impth)
+            return img.detach(), label.unsqueeze(0).detach(), img_name
+        else:
+            return img.detach(), label.unsqueeze(0).detach()
 
     def get_image(self, impth, lbpth):
         img = cv2.imread(impth)[:, :, ::-1].copy()

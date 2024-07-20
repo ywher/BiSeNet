@@ -1,0 +1,24 @@
+### bev2024
+# python tools/evaluate.py \
+# --config configs/bisenetv1_bev2024.py \
+# --weight-path res/bev_2024/model_final.pth \
+
+
+### bev2024_1024
+CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
+--config configs/bisenetv1_bev20234_1024.py \
+--weight-path res/bev_20234_1024_1witers/model_final.pth \
+--save_pred
+
+### bev2024_1024_6cls
+# python tools/evaluate.py \
+# --config configs/bisenetv1_bev20234_1024_6cls.py \
+# --weight-path res/bev_20234_1024_6cls_2witers/model_final.pth \
+# --save_pred
+
+
+### HYRoad
+# python tools/evaluate.py \
+# --config configs/bisenetv1_HYRoad.py \
+# --weight-path res/HYRoad_2witers/model_final.pth \
+# --save_pred

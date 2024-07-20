@@ -25,16 +25,17 @@ proportion of each class label pixels:
 
 class ADE20k(BaseDataset):
 
-    def __init__(self, dataroot, annpath, trans_func=None, mode='train'):
+    def __init__(self, dataroot, annpath, trans_func=None, mode='train', norm={'mean':(0.49343230, 0.46819794,  0.43106043), 'std':(0.25680755, 0.25506608, 0.27422913)}, return_img_name=False):
         super(ADE20k, self).__init__(
-                dataroot, annpath, trans_func, mode)
+                dataroot, annpath, trans_func, mode, norm, return_img_name)
         self.n_cats = 150
         self.lb_ignore = 255
         self.lb_map = np.arange(200) - 1 # label range from 1 to 149, 0 is ignored
         self.lb_map[0] = 255
+        self.norm_cfg = norm
 
         self.to_tensor = T.ToTensor(
-            mean=(0.49343230, 0.46819794,  0.43106043), # ade20k, rgb
-            std=(0.25680755, 0.25506608, 0.27422913),
+            mean=self.norm_cfg['mean'], # ade20k, rgb
+            std=self.norm_cfg['std'],
         )
 

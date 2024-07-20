@@ -58,21 +58,19 @@ labels_info = [
 class CityScapes(BaseDataset):
     '''
     '''
-    def __init__(self, dataroot, annpath, trans_func=None, mode='train'):
+    def __init__(self, dataroot, annpath, trans_func=None, mode='train', norm={'mean':(0.3257, 0.3690, 0.3223), 'std':(0.2112, 0.2148, 0.2115)}, return_img_name=False):
         super(CityScapes, self).__init__(
-                dataroot, annpath, trans_func, mode)
+                dataroot, annpath, trans_func, mode, norm, return_img_name)
         self.n_cats = 19
         self.lb_ignore = 255
         self.lb_map = np.arange(256).astype(np.uint8)
         for el in labels_info:
             self.lb_map[el['id']] = el['trainId']
-
+        self.norm_cfg = norm
         self.to_tensor = T.ToTensor(
-            mean=(0.3257, 0.3690, 0.3223), # city, rgb
-            std=(0.2112, 0.2148, 0.2115),
+            mean=self.norm_cfg['mean'], # city, rgb
+            std=self.norm_cfg['std'],
         )
-
-
 
 
 

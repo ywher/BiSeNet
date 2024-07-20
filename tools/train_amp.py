@@ -177,6 +177,17 @@ def train():
             print_log_msg(
                 it, cfg.max_iter, lr, time_meter, loss_meter,
                 loss_pre_meter, loss_aux_meters)
+        
+        if (it + 1) % cfg.eval_intervals == 0:
+            logger.info('\nevaluating the final model')
+            # torch.cuda.empty_cache()
+            iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net.module)
+            logger.info('\neval results of f1 score metric:')
+            logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
+            logger.info('\neval results of miou metric:')
+            logger.info('\n' + tabulate(iou_content, headers=iou_heads, tablefmt='orgtbl'))
+            
+        
         lr_schdr.step()
 
     ## dump the final model and evaluate the result

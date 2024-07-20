@@ -10,6 +10,8 @@ import argparse
 import math
 from tabulate import tabulate
 
+os.chdir(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from tqdm import tqdm
 import numpy as np
 import cv2
@@ -23,6 +25,8 @@ from lib.models import model_factory
 from configs import set_cfg_from_file
 from lib.logger import setup_logger
 from lib.data import get_data_loader
+from utils.color_map import color_map
+from utils.classes import CLASSES
 
 
 def get_round_size(size, divisor=32):
@@ -126,13 +130,53 @@ class Metrics(object):
 
 class MscEvalV0(object):
 
-    def __init__(self, n_classes, scales=(0.5, ), flip=False, lb_ignore=255, size_processor=None):
+    def __init__(self, n_classes, scales=(0.5, ), flip=False, lb_ignore=255, size_processor=None, save_pred=False, save_root=None, color_map={}):
         self.n_classes = n_classes
         self.scales = scales
         self.flip = flip
         self.ignore_label = lb_ignore
         self.sp = size_processor
         self.metric_observer = Metrics(n_classes, lb_ignore)
+        self.save_pred = save_pred
+        self.save_root = save_root
+        if self.save_pred and self.save_root is not None:
+            self.save_root = os.path.join(self.save_root, 'pred')
+            self.create_folder(self.save_root)
+            self.create_folder(os.path.join(self.save_root, 'trainid'))
+            self.create_folder(os.path.join(self.save_root, 'color'))
+            self.color_map = color_map
+    
+    def create_folder(self, out_folder):
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder)
+    
+    def colorize_prediction(self, prediction_image):
+        """
+        color the prediction of semantic segmentation model
+
+        参数：
+        - prediction_image: prediction in NumPy array
+
+        返回值：
+        - colored_image: 上色后的 numpy 对象, in BGR format.
+        """
+        # 将PIL Image转换为NumPy数组
+        prediction_array = np.array(prediction_image)
+
+        # 获取图像大小
+        height, width = prediction_array.shape
+
+        # 创建一个新的数组来存储上色后的图像
+        colored_array = np.zeros((height, width, 3), dtype=np.uint8)
+
+        # 根据颜色映射给预测结果图上色
+        for label, color in self.color_map.items():
+            # 找到与类别标签对应的像素点，并将其设为相应的颜色
+            colored_array[prediction_array == label] = color
+
+        colored_array = colored_array[:, :, ::-1]
+        
+        return colored_array
 
     @torch.no_grad()
     def __call__(self, net, dl):
@@ -143,7 +187,11 @@ class MscEvalV0(object):
             diter = enumerate(dl)
         else:
             diter = enumerate(tqdm(dl))
-        for i, (imgs, label) in diter:
+        for i, data in diter:
+            if self.save_pred:
+                (imgs, label, names) = data
+            else:
+                (imgs, label) = data
             imgs = self.sp(imgs)
             N, _, H, W = imgs.shape
             label = label.squeeze(1).cuda()
@@ -171,10 +219,23 @@ class MscEvalV0(object):
                     probs += torch.softmax(logits, dim=1)
             preds = torch.argmax(probs, dim=1)
             self.metric_observer.update(preds, label)
+            
+            # save the prediction trainid
+            if self.save_pred and self.save_root is not None:
+                self.save_pred_trainid(preds, names)
 
         metric_dict = self.metric_observer.compute_metrics()
         return metric_dict
-
+    
+    def save_pred_trainid(self, preds, img_names):
+        for pred, img_name in zip(preds, img_names):
+            pred = pred.cpu().numpy().astype(np.uint8)
+            pred = cv2.cvtColor(pred, cv2.COLOR_GRAY2BGR)
+            save_path = osp.join(self.save_root, 'trainid', img_name)
+            cv2.imwrite(save_path, pred)
+            color_pred = self.colorize_prediction(pred[:, :, 0])
+            save_path = osp.join(self.save_root, 'color', img_name)
+            cv2.imwrite(save_path, color_pred)
 
 
 class MscEvalCrop(object):
@@ -187,13 +248,15 @@ class MscEvalCrop(object):
         flip=True,
         scales=[0.5, 0.75, 1, 1.25, 1.5, 1.75],
         lb_ignore=255,
-        size_processor=None
+        size_processor=None,
+        save_pred=False,
     ):
         self.n_classes = n_classes
         self.scales = scales
         self.ignore_label = lb_ignore
         self.flip = flip
         self.sp = size_processor
+        self.save_pred = save_pred
         self.metric_observer = Metrics(n_classes, lb_ignore)
 
         self.cropsize = cropsize if isinstance(cropsize, (list, tuple)) else (cropsize, cropsize)
@@ -267,7 +330,11 @@ class MscEvalCrop(object):
         else:
             diter = enumerate(tqdm(dl))
 
-        for i, (imgs, label) in diter:
+        for i, data in diter:
+            if self.save_pred:
+                (imgs, label, _) = data
+            else:
+                (imgs, label) = data
             imgs = imgs.cuda()
             imgs = self.sp(imgs)
             label = label.squeeze(1).cuda()
@@ -285,28 +352,33 @@ class MscEvalCrop(object):
         return metric_dict
 
 
-def print_res_table(tname, heads, weights, metric, cat_metric):
+def print_res_table(tname, heads, weights, metric, cat_metric, class_names=None):
     heads = [tname, 'ratio'] + heads
     lines = []
     for k, v in metric.items():
         line = [k, '-'] + [f'{el:.6f}' for el in v]
         lines.append(line)
     cat_res = [weights,] + cat_metric
-    cat_res = [
-            [f'cat {idx}',] + [f'{el:.6f}' for el in group]
-            for idx,group in enumerate(zip(*cat_res))]
+    if class_names is not None:
+        cat_res = [
+                [f'{class_names[idx]}',] + [f'{el:.6f}' for el in group]
+                for idx,group in enumerate(zip(*cat_res))]
+    else:
+        cat_res = [
+                [f'cat {idx}',] + [f'{el:.6f}' for el in group]
+                for idx,group in enumerate(zip(*cat_res))]
     content = cat_res + lines
     return heads, content
 
 
 @torch.no_grad()
-def eval_model(cfg, net):
+def eval_model(cfg, net, save_pred):
     org_aux = net.aux_mode
     net.aux_mode = 'eval'
     net.eval()
 
     is_dist = dist.is_initialized()
-    dl = get_data_loader(cfg, mode='val')
+    dl = get_data_loader(cfg, mode='val',save_pred=save_pred)
     lb_ignore = dl.dataset.lb_ignore
 
     heads, mious, fw_mious, cat_ious = [], [], [], []
@@ -317,14 +389,18 @@ def eval_model(cfg, net):
             cfg.get('eval_start_shape'),
             cfg.get('eval_start_shortside'),
             cfg.get('eval_start_longside'),
-            )
+            )  # None None None
 
+    color_dict = color_map[cfg.color_dataset]
     single_scale = MscEvalV0(
             n_classes=cfg.n_cats,
             scales=(1., ),
             flip=False,
             lb_ignore=lb_ignore,
-            size_processor=size_processor
+            size_processor=size_processor,
+            save_pred=save_pred,
+            save_root=cfg.respth,
+            color_map=color_dict
     )
     logger.info('compute single scale metrics')
     metrics = single_scale(net, dl)
@@ -343,7 +419,8 @@ def eval_model(cfg, net):
             flip=False,
             scales=(1., ),
             lb_ignore=lb_ignore,
-            size_processor=size_processor
+            size_processor=size_processor,
+            save_pred=save_pred,
     )
     logger.info('compute single scale crop metrics')
     metrics = single_crop(net, dl)
@@ -360,7 +437,8 @@ def eval_model(cfg, net):
             scales=cfg.eval_scales,
             flip=True,
             lb_ignore=lb_ignore,
-            size_processor=size_processor
+            size_processor=size_processor,
+            save_pred=save_pred,
     )
     logger.info('compute multi scale flip metrics')
     metrics = ms_flip(net, dl)
@@ -379,7 +457,8 @@ def eval_model(cfg, net):
             flip=True,
             scales=cfg.eval_scales,
             lb_ignore=lb_ignore,
-            size_processor=size_processor
+            size_processor=size_processor,
+            save_pred=save_pred,
     )
     logger.info('compute multi scale flip crop metrics')
     metrics = ms_flip_crop(net, dl)
@@ -392,19 +471,20 @@ def eval_model(cfg, net):
     micro_f1.append(metrics['micro_f1'])
 
     weights = metrics['weights']
-
+    
+    class_names = CLASSES.get(cfg.color_dataset, None)
     metric = dict(mious=mious, fw_mious=fw_mious)
     iou_heads, iou_content = print_res_table('iou', heads,
-            weights, metric, cat_ious)
+            weights, metric, cat_ious, class_names=class_names)
     metric = dict(macro_f1=macro_f1, micro_f1=micro_f1)
     f1_heads, f1_content = print_res_table('f1 score', heads,
-            weights, metric, f1_scores)
+            weights, metric, f1_scores, class_names=class_names)
 
     net.aux_mode = org_aux
     return iou_heads, iou_content, f1_heads, f1_content
 
 
-def evaluate(cfg, weight_pth):
+def evaluate(cfg, weight_pth, save_pred=False):
     logger = logging.getLogger()
 
     ## model
@@ -422,7 +502,7 @@ def evaluate(cfg, weight_pth):
     #      )
 
     ## evaluator
-    iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net)
+    iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net, save_pred)
     logger.info('\neval results of f1 score metric:')
     logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
     logger.info('\neval results of miou metric:')
@@ -431,10 +511,9 @@ def evaluate(cfg, weight_pth):
 
 def parse_args():
     parse = argparse.ArgumentParser()
-    parse.add_argument('--weight-path', dest='weight_pth', type=str,
-                       default='model_final.pth',)
-    parse.add_argument('--config', dest='config', type=str,
-            default='configs/bisenetv2.py',)
+    parse.add_argument('--config', dest='config', type=str, default='configs/bisenetv1_bev2024.py',)
+    parse.add_argument('--weight-path', dest='weight_pth', type=str, default='res/bev_2024/model_final.pth',)
+    parse.add_argument('--save_pred', action='store_true', default=False)
     return parse.parse_args()
 
 
@@ -447,7 +526,7 @@ def main():
         dist.init_process_group(backend='nccl')
     if not osp.exists(cfg.respth): os.makedirs(cfg.respth)
     setup_logger(f'{cfg.model_type}-{cfg.dataset.lower()}-eval', cfg.respth)
-    evaluate(cfg, args.weight_pth)
+    evaluate(cfg, args.weight_pth, args.save_pred)
 
 
 if __name__ == "__main__":

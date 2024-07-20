@@ -14,11 +14,7 @@ from lib.data.hyroad import HYRoad
 from lib.data.customer_dataset import CustomerDataset
 
 
-
-
-
-
-def get_data_loader(cfg, mode='train'):
+def get_data_loader(cfg, mode='train',save_pred=False):
     if mode == 'train':
         trans_func = T.TransformationTrain(cfg.scales, cfg.cropsize)
         batchsize = cfg.ims_per_gpu
@@ -32,7 +28,7 @@ def get_data_loader(cfg, mode='train'):
         shuffle = False
         drop_last = False
 
-    ds = eval(cfg.dataset)(cfg.im_root, annpath, trans_func=trans_func, mode=mode)
+    ds = eval(cfg.dataset)(cfg.im_root, annpath, trans_func=trans_func, mode=mode, norm={'mean':cfg.rgb_mean, 'std': cfg.rgb_std}, return_img_name=save_pred)
 
     if dist.is_initialized():
         assert dist.is_available(), "dist should be initialzed"

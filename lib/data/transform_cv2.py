@@ -138,6 +138,24 @@ class ToTensor(object):
         if not lb is None:
             lb = torch.from_numpy(lb.astype(np.int64).copy()).clone()
         return dict(im=im, lb=lb)
+    
+class ToTensor_Img(object):
+    '''
+    mean and std should be of the channel order 'bgr'
+    '''
+    def __init__(self, mean=(0, 0, 0), std=(1., 1., 1.)):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, im):
+        im = im.transpose(2, 0, 1).astype(np.float32)
+        im = torch.from_numpy(im).div_(255)
+        dtype, device = im.dtype, im.device
+        mean = torch.as_tensor(self.mean, dtype=dtype, device=device)[:, None, None]
+        std = torch.as_tensor(self.std, dtype=dtype, device=device)[:, None, None]
+        im = im.sub_(mean).div_(std).clone()
+
+        return im
 
 
 class Compose(object):

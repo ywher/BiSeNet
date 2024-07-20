@@ -13,7 +13,9 @@ datasets/*.jpeg
 datasets/*.json
 
 datasets/bev_2024
+datasets/bev_2024_6cls
 datasets/bev_20234_1024
+datasets/bev_20234_1024_6cls
 datasets/mapillary
 datasets/HYRoad
 datasets/HYRoad_3cls
