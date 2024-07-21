@@ -1,19 +1,24 @@
 # ### bev2024
-# python check_dataset_info.py \
-# --im_root ../datasets/bev_2024 \
-# --im_anns ../datasets/bev_2024/train.txt
-
+# data_path="datasets/bev_2024"
+# split="train"
 
 ### bev20234
-python check_dataset_info.py \
---im_root ../datasets/bev_20234_1024 \
---im_anns ../datasets/bev_20234_1024/val.txt
+# data_path="datasets/bev_20234_1024"
+# split="train"
 
 # python check_dataset_info.py \
-# --im_root ../datasets/bev_20234_1024_6cls \
-# --im_anns ../datasets/bev_20234_1024_6cls/val.txt
+# data_path="datasets/bev_20234_1024_6cls"
+# split="train"
 
 ### HYRoad
-# python tools/check_dataset_info.py \
-# --im_root datasets/HYRoad \
-# --im_anns datasets/HYRoad/train.txt
+# data_path="datasets/HYRoad"
+# split="train"
+
+### cityscapes
+data_path="datasets/cityscapes"
+split="val"
+
+
+python check_dataset_info.py \
+--im_root ../${data_path} \
+--im_anns ../${data_path}/${split}.txt

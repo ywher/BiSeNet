@@ -15,9 +15,12 @@ cfg = dict(
     cropsize=[1024, 1024],
     eval_crop=[1024, 1024],
     eval_scales=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
+    rgb_mean=(0.3257, 0.3690, 0.3223),
+    rgb_std=(0.2112, 0.2148, 0.2115),
     ims_per_gpu=8,
     eval_ims_per_gpu=2,
+    eval_intervals=4000,
     use_fp16=True,
     use_sync_bn=False,
-    respth='./res',
+    respth='./res/city_1024_8witers',
 )

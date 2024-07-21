@@ -1,0 +1,5 @@
+pycuda
+tqdm
+opencv-python
+pycuda
+six

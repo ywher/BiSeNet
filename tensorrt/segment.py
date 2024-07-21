@@ -73,6 +73,15 @@ def allocate_buffers(engine):
 
 
 def build_engine_from_onnx(onnx_file_path):
+    """
+    Builds a TensorRT engine from an ONNX file.
+
+    Args:
+        onnx_file_path (str): The path to the ONNX file.
+
+    Returns:
+        trt.ICudaEngine: The built TensorRT engine.
+    """
     engine = None ## add this to avoid return deleted engine
     EXPLICIT_BATCH = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
     with trt.Builder(TRT_LOGGER) as builder, builder.create_network(EXPLICIT_BATCH) as network, builder.create_builder_config() as config, trt.OnnxParser(network, TRT_LOGGER) as parser, trt.Runtime(TRT_LOGGER) as runtime:
@@ -100,6 +109,16 @@ def build_engine_from_onnx(onnx_file_path):
 
 
 def serialize_engine_to_file(engine, savepth):
+    """
+    Serialize the TensorRT engine and save it to a file.
+
+    Args:
+        engine (tensorrt.ICudaEngine): The TensorRT engine to be serialized.
+        savepth (str): The path to save the serialized engine.
+
+    Returns:
+        None
+    """
     plan = engine.serialize()
     with open(savepth, "wb") as fw:
         fw.write(plan)

@@ -15,6 +15,7 @@ os.chdir(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from tqdm import tqdm
 import numpy as np
 import cv2
+import pandas as pd
 
 import torch
 import torch.nn as nn
@@ -356,16 +357,16 @@ def print_res_table(tname, heads, weights, metric, cat_metric, class_names=None)
     heads = [tname, 'ratio'] + heads
     lines = []
     for k, v in metric.items():
-        line = [k, '-'] + [f'{el:.6f}' for el in v]
+        line = [k, '-'] + [f'{el*100:.6f}' for el in v]
         lines.append(line)
     cat_res = [weights,] + cat_metric
     if class_names is not None:
         cat_res = [
-                [f'{class_names[idx]}',] + [f'{el:.6f}' for el in group]
+                [f'{class_names[idx]}',] + [f'{el*100:.6f}' for el in group]
                 for idx,group in enumerate(zip(*cat_res))]
     else:
         cat_res = [
-                [f'cat {idx}',] + [f'{el:.6f}' for el in group]
+                [f'cat {idx}',] + [f'{el*100:.6f}' for el in group]
                 for idx,group in enumerate(zip(*cat_res))]
     content = cat_res + lines
     return heads, content
@@ -411,6 +412,18 @@ def eval_model(cfg, net, save_pred=False):
     f1_scores.append(metrics['f1_scores'])
     macro_f1.append(metrics['macro_f1'])
     micro_f1.append(metrics['micro_f1'])
+    if save_pred:
+        file_name = os.path.join(cfg.respth, 'ss_data.csv')
+        data_dict = {}
+        data_dict[0] = metrics['miou'] * 100
+        for i in range(len(metrics['ious'])):
+            if metrics['ious'][i] < 1:
+                data_dict[i + 1] = [metrics['ious'][i] * 100]
+            else:
+                data_dict[i + 1] = [metrics['ious'][i]]
+
+        data_dict = pd.DataFrame(data_dict)
+        data_dict.to_csv(file_name, index=False)
 
     single_crop = MscEvalCrop(
             n_classes=cfg.n_cats,

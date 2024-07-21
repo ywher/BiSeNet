@@ -23,5 +23,5 @@ cfg = dict(
     eval_intervals=4000,
     use_fp16=True,
     use_sync_bn=False,
-    respth='./res/bev_20234_1024_2witers',
+    respth='./res/bev_20234_1024_5kiters',
 )
