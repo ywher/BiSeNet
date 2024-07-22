@@ -213,17 +213,28 @@ class Compose(object):
 
 class TransformationTrain(object):
 
-    def __init__(self, scales, cropsize, rotate=180):
-        self.trans_func = Compose([
-            RandomResizedCrop(scales, cropsize),
-            RandomRotate(rotate),
-            RandomHorizontalFlip(),
-            ColorJitter(
-                brightness=0.4,
-                contrast=0.4,
-                saturation=0.4
-            ),
-        ])
+    def __init__(self, scales, cropsize, rotate=0):
+        if rotate > 0:
+            self.trans_func = Compose([
+                RandomResizedCrop(scales, cropsize),
+                RandomRotate(rotate),
+                RandomHorizontalFlip(),
+                ColorJitter(
+                    brightness=0.4,
+                    contrast=0.4,
+                    saturation=0.4
+                ),
+            ])
+        else:
+            self.trans_func = Compose([
+                RandomResizedCrop(scales, cropsize),
+                RandomHorizontalFlip(),
+                ColorJitter(
+                    brightness=0.4,
+                    contrast=0.4,
+                    saturation=0.4
+                ),
+            ])
 
     def __call__(self, im_lb):
         im_lb = self.trans_func(im_lb)
