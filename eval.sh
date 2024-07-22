@@ -20,5 +20,5 @@
 ### HYRoad
 python tools/evaluate.py \
 --config configs/bisenetv1_HYRoad.py \
---weight-path res/HYRoad_2witers/model_final.pth \
+--weight-path res/HYRoad_5kiters/model_final.pth \
 --save_pred

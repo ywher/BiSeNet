@@ -30,6 +30,8 @@ datasets/coco/labels
 datasets/ade20k/images
 datasets/ade20k/annotations
 
+lib/data/images/*.png
+
 # Distribution / packaging
 .Python
 build/

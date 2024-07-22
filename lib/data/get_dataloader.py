@@ -16,7 +16,7 @@ from lib.data.customer_dataset import CustomerDataset
 
 def get_data_loader(cfg, mode='train',save_pred=False):
     if mode == 'train':
-        trans_func = T.TransformationTrain(cfg.scales, cfg.cropsize)
+        trans_func = T.TransformationTrain(cfg.scales, cfg.cropsize, cfg.rotate)
         batchsize = cfg.ims_per_gpu
         annpath = cfg.train_im_anns
         shuffle = True

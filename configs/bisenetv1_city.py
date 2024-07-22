@@ -8,6 +8,7 @@ cfg = dict(
     warmup_iters=1000,
     max_iter=80000,
     dataset='CityScapes',
+    color_dataset='cityscapes',
     im_root='./datasets/cityscapes',
     train_im_anns='./datasets/cityscapes/train.txt',
     val_im_anns='./datasets/cityscapes/val.txt',

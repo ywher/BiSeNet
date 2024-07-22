@@ -8,14 +8,17 @@ os.chdir(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from tqdm import tqdm
 import numpy as np
 import cv2
-
+import time
 import torch
+import math
 
 from lib.models import model_factory
 from configs import set_cfg_from_file
 import lib.data.transform_cv2 as T 
 from lib.logger import setup_logger
 from utils.color_map import color_map
+from utils.util import AverageMeter
+import torch.nn.functional as F
 
 class Predictor(object):
     def __init__(self, config, weight_path):
@@ -71,12 +74,18 @@ class Predictor(object):
 
     @torch.no_grad()
     def predict(self, img):
-        img = self.to_tensor(img)
-        img = img.cuda().unsqueeze(0)
+        img = self.to_tensor(img).unsqueeze(0)
+        N, _, H, W = img.shape
+        H, W = self.get_round_size((H, W))
+        img = F.interpolate(img, (H, W), mode='bilinear', align_corners=True)
+        img = img.cuda()
         with torch.no_grad():
             out = self.net(img).squeeze(0)
         out = out.cpu().numpy().astype(np.uint8)
         return out
+    
+    def get_round_size(self, size, divisor=32):
+        return [math.ceil(el / divisor) * divisor for el in size]
 
     def predict_folder(self, dataset, img_folder, out_folder):
         self.color_map = color_map[dataset]
@@ -87,14 +96,22 @@ class Predictor(object):
         color_folder = os.path.join(out_folder, 'color')
         self.create_folder(color_folder)
 
+        time_meter = AverageMeter()
+        
         print('Predicting total images in the folder:', len(os.listdir(img_folder)))
-        for img_name in tqdm(os.listdir(img_folder)):
+        image_list = os.listdir(img_folder)
+        image_list.sort()
+        for img_name in tqdm(image_list):
             img_path = os.path.join(img_folder, img_name)
             img = cv2.imread(img_path)[:, :, ::-1].copy()
+            pred_start_t = time.time()
             out = self.predict(img)
+            time_meter.update(time.time() - pred_start_t)
+            
             cv2.imwrite(os.path.join(trainid_folder, img_name), out)
             color_out = self.colorize_prediction(out)
             cv2.imwrite(os.path.join(color_folder, img_name), color_out)
+        print('Average pred time for each image:', time_meter.avg)
 
     def predict_image(self, img_path, out_folder):
         self.create_folder(out_folder)

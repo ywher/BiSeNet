@@ -9,6 +9,13 @@ import numpy as np
 import cv2
 import torch
 
+### for debug
+# import os
+# import sys
+# sys.path.insert(0, '.')
+# sys.path.append('/media/ywh/pool1/yanweihao/projects/segmentation/real-time/BiSeNet')
+# from utils.color_map import color_map as color_maps
+# from utils.color_prediction import colorize_prediction_cv2
 
 
 class RandomResizedCrop(object):
@@ -49,6 +56,43 @@ class RandomResizedCrop(object):
             im=im[sh:sh+crop_h, sw:sw+crop_w, :].copy(),
             lb=lb[sh:sh+crop_h, sw:sw+crop_w].copy()
         )
+
+
+class RandomRotate(object):
+    '''
+    Randomly rotate an image and its corresponding semantic label.
+    The image will be filled with (0,0,0) in empty areas, and the label will be filled with 255.
+
+    Parameters:
+    angle (int or float): Maximum rotation angle in degrees. Rotation will be randomly chosen
+                          between -angle and +angle.
+    '''
+    def __init__(self, angle=180, im_fill=(0, 0, 0), lb_fill=255):
+        self.angle = angle
+        self.im_fill = im_fill
+        self.lb_fill = lb_fill
+        
+    def __call__(self, im_lb):
+        im, lb = im_lb['im'], im_lb['lb']
+        
+        # Ensure the image and label have the same dimensions
+        assert im.shape[:2] == lb.shape[:2]
+        
+        # Generate a random rotation angle between -self.angle and +self.angle
+        angle = np.random.uniform(-self.angle, self.angle)
+        
+        # Get image dimensions
+        h, w = im.shape[:2]
+        
+        # Calculate the rotation matrix
+        M = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1)
+        
+        # Apply the affine transformation (rotation) with filling values
+        im = cv2.warpAffine(im, M, (w, h), borderMode=cv2.BORDER_CONSTANT, borderValue=self.im_fill)
+        lb = cv2.warpAffine(lb, M, (w, h), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=self.lb_fill)
+        
+        # Return the rotated image and label in the original dictionary format
+        return dict(im=im, lb=lb)
 
 
 
@@ -117,8 +161,6 @@ class ColorJitter(object):
         return table[im]
 
 
-
-
 class ToTensor(object):
     '''
     mean and std should be of the channel order 'bgr'
@@ -171,9 +213,10 @@ class Compose(object):
 
 class TransformationTrain(object):
 
-    def __init__(self, scales, cropsize):
+    def __init__(self, scales, cropsize, rotate=180):
         self.trans_func = Compose([
             RandomResizedCrop(scales, cropsize),
+            RandomRotate(rotate),
             RandomHorizontalFlip(),
             ColorJitter(
                 brightness=0.4,
@@ -196,5 +239,19 @@ class TransformationVal(object):
 
 
 if __name__ == '__main__':
-    pass
+    img_path = "images/img.png"
+    lb_path = "images/lb.png"
+    img = cv2.imread(img_path)
+    lb = cv2.imread(lb_path, cv2.IMREAD_GRAYSCALE)
+    im_lb_dict = {'im':img, 'lb':lb}
+    color_mp = color_maps['bev_20234']
+    
+    random_rotate = RandomRotate()
+    rotate_img_lb = random_rotate(im_lb_dict)
+    rotate_img = rotate_img_lb['im']
+    rotate_lb = rotate_img_lb['lb']
+    color_rotate_lb = colorize_prediction_cv2(rotate_lb, color_mp)[:,:,::-1]
+    cv2.imwrite("images/rotate_img.png", rotate_img)
+    cv2.imwrite("images/rotate_lb.png", rotate_lb)
+    cv2.imwrite("images/color_rotate_lb.png", color_rotate_lb)
 
