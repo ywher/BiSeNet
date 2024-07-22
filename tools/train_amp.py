@@ -44,7 +44,8 @@ def parse_args():
     parse = argparse.ArgumentParser()
     parse.add_argument('--config', dest='config', type=str,
             default='configs/bisenetv2.py',)
-    parse.add_argument('--finetune-from', type=str, default=None,)
+    # parse.add_argument('--finetune-from', type=str, default=None,)
+    parse.add_argument('--finetune-from', action='store_true', default=False)
     return parse.parse_args()
 
 args = parse_args()
@@ -54,10 +55,12 @@ cfg = set_cfg_from_file(args.config)
 def set_model(lb_ignore=255):
     logger = logging.getLogger()
     net = model_factory[cfg.model_type](cfg.n_cats)
-    if not args.finetune_from is None:
-        logger.info(f'load pretrained weights from {args.finetune_from}')
-        msg = net.load_state_dict(torch.load(args.finetune_from,
-            map_location='cpu'), strict=False)
+    # if not args.finetune_from is None:
+    if args.finetune_from:
+        logger.info(f'load pretrained weights from {cfg.pretrained}')
+        # msg = net.load_state_dict(torch.load(args.finetune_from,
+        #     map_location='cpu'), strict=False)
+        msg = net.load_pretrained_model(cfg.pretrained, cfg.rm_layer_names)
         logger.info('\tmissing keys: ' + json.dumps(msg.missing_keys))
         logger.info('\tunexpected keys: ' + json.dumps(msg.unexpected_keys))
     if cfg.use_sync_bn: net = nn.SyncBatchNorm.convert_sync_batchnorm(net)

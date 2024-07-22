@@ -312,6 +312,36 @@ class BiSeNetV1(nn.Module):
                 wd_params += child_wd_params
                 nowd_params += child_nowd_params
         return wd_params, nowd_params, lr_mul_wd_params, lr_mul_nowd_params
+    
+    def load_pretrained_model(self, pretrained_model, rm_layer_names=None):
+        '''
+        ###func
+        load the pretrained model, can set the layer names to be removed
+        
+        ###params
+        pretrained_model: str, the path of the pretrained model
+        rm_layer_names: list, the layer names to be removed
+        '''
+        state_dict = torch.load(pretrained_model, map_location='cpu')
+        if 'model' in state_dict.keys():
+            state_dict = state_dict['model']
+        if rm_layer_names is None:
+            msg = self.load_state_dict(state_dict, strict=False)
+        else:
+            new_state_dict = {}
+            for key in state_dict.keys():
+                save_flag = True
+                for rm_layer_name in rm_layer_names:
+                    if rm_layer_name in key:
+                        save_flag = False
+                        break
+                if save_flag:
+                    new_state_dict[key.replace('module.', '')] = state_dict[key]
+            # for k, _ in new_state_dict.items():
+            #     self.logger.info(k)
+            # self.logger.info("==========")
+            msg = self.load_state_dict(new_state_dict, strict=False)
+        return msg
 
 
 if __name__ == "__main__":
