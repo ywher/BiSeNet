@@ -5,7 +5,7 @@ cfg = dict(
     num_aux_heads=2,
     pretrained="./res/city_1024_8witers/model_final.pth",
     rm_layer_names=['conv_out', 'conv_out16', 'conv_out32'],
-    lr_start=1e-2,
+    lr_start=1e-3,
     weight_decay=5e-4,
     warmup_iters=1000,
     max_iter=20000,  # 80000
@@ -26,5 +26,5 @@ cfg = dict(
     eval_intervals=2000,
     use_fp16=True,
     use_sync_bn=False,
-    respth='./res/HYRoad_2witers_pretrain',
+    respth='./res/HYRoad_2witers_pretrain_lr1e-3',
 )

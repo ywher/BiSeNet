@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 import torch.cuda.amp as amp
 
 from lib.models import model_factory
-from configs import set_cfg_from_file
+from configs import set_cfg_from_file, cvt_cfg_dict_to_json
 from lib.data import get_data_loader
 from evaluate import eval_model
 from lib.ohem_ce_loss import OhemCELoss
@@ -125,6 +125,11 @@ def set_meters():
 
 
 def train():
+    # save config into config respth
+    cfg_dict = cvt_cfg_dict_to_json(cfg)
+    with open(osp.join(cfg.respth, 'config.json'), 'w') as f:
+        f.write(json.dumps(cfg_dict, indent=4))
+        
     logger = logging.getLogger()
 
     ## dataset

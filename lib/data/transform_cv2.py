@@ -71,8 +71,12 @@ class RandomRotate(object):
         self.angle = angle
         self.im_fill = im_fill
         self.lb_fill = lb_fill
+        self.p = 0.5
         
     def __call__(self, im_lb):
+        if np.random.random() < self.p:
+            return im_lb
+        
         im, lb = im_lb['im'], im_lb['lb']
         
         # Ensure the image and label have the same dimensions
