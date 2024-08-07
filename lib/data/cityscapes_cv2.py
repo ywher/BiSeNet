@@ -63,9 +63,10 @@ class CityScapes(BaseDataset):
                 dataroot, annpath, trans_func, mode, norm, return_img_name)
         self.n_cats = 19
         self.lb_ignore = 255
-        self.lb_map = np.arange(256).astype(np.uint8)
-        for el in labels_info:
-            self.lb_map[el['id']] = el['trainId']
+        # remove the lb_map use train_labelid directly
+        # self.lb_map = np.arange(256).astype(np.uint8)
+        # for el in labels_info:
+        #     self.lb_map[el['id']] = el['trainId']
         self.norm_cfg = norm
         self.to_tensor = T.ToTensor(
             mean=self.norm_cfg['mean'], # city, rgb

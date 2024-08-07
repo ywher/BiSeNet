@@ -22,16 +22,16 @@ NOTE: replace torchrun with torch.distributed.launch if you use older version of
 # torchrun --nproc_per_node=$NGPUS tools/train_amp.py --config $cfg_file
 
 ## HYRoad
-export CUDA_VISIBLE_DEVICES=0,1
-cfg_file=configs/bisenetv1_HYRoad.py
-NGPUS=2
-torchrun --nproc_per_node=$NGPUS --master_port=25005 tools/train_amp.py --config $cfg_file --finetune-from
+# export CUDA_VISIBLE_DEVICES=0,1
+# cfg_file=configs/bisenetv1_HYRoad.py
+# NGPUS=2
+# torchrun --nproc_per_node=$NGPUS --master_port=25005 tools/train_amp.py --config $cfg_file --finetune-from
 
 ## bisenetv1 cityscapes
-# export CUDA_VISIBLE_DEVICES=0,1
-# cfg_file=configs/bisenetv1_city.py
-# NGPUS=2
-# torchrun --nproc_per_node=$NGPUS tools/train_amp.py --config $cfg_file
+export CUDA_VISIBLE_DEVICES=0,1
+cfg_file=configs/bisenetv1_city.py
+NGPUS=2
+torchrun --nproc_per_node=$NGPUS tools/train_amp.py --config $cfg_file
 
 
 ## bisenetv2 cityscapes

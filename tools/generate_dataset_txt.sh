@@ -1,15 +1,15 @@
 ### bev2024
-for split in "train" "val"
-do
-    python generate_dataset_txt.py \
-        --dataset "bev_2024_6cls" \
-        --data_path "datasets/bev_2024_6cls" \
-        --image_folder "image" \
-        --image_suffix ".png" \
-        --label_folder "label" \
-        --label_suffix ".png" \
-        --split "${split}"
-done
+# for split in "train" "val"
+# do
+#     python generate_dataset_txt.py \
+#         --dataset "bev_2024_6cls" \
+#         --data_path "datasets/bev_2024_6cls" \
+#         --image_folder "image" \
+#         --image_suffix ".png" \
+#         --label_folder "label" \
+#         --label_suffix ".png" \
+#         --split "${split}"
+# done
 
 ### bev20234
 # for split in "train" "val"
@@ -50,6 +50,20 @@ done
 #         --label_suffix ".png" \
 #         --split ${split}
 # done
+
+### cityscapes
+for split in "train_512" "val_512"
+do
+    python generate_dataset_txt.py \
+        --dataset "cityscapes" \
+        --data_path "datasets/cityscapes" \
+        --image_folder "leftImg8bit" \
+        --image_suffix "_leftImg8bit.png" \
+        --label_folder "gtFine" \
+        --label_suffix "_gtFine_labelTrainIds.png" \
+        --split ${split} \
+        --subfolder True
+done
 
 ### mapillary
 # for split in "train" "val"
