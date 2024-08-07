@@ -21,8 +21,8 @@ datasets/HYRoad
 datasets/HYRoad_3cls
 
 
-datasets/cityscapes/leftImg8bit/*
-datasets/cityscapes/gtFine/*
+datasets/cityscapes/leftImg8bit
+datasets/cityscapes/gtFine
 
 datasets/coco/images
 datasets/coco/labels
