@@ -371,6 +371,72 @@ def print_res_table(tname, heads, weights, metric, cat_metric, class_names=None)
     content = cat_res + lines
     return heads, content
 
+@torch.no_grad()
+def eval_model_single_scale(cfg, net, save_pred=False):
+    org_aux = net.aux_mode
+    net.aux_mode = 'eval'
+    net.eval()
+
+    is_dist = dist.is_initialized()
+    dl = get_data_loader(cfg, mode='val',save_pred=save_pred)
+    lb_ignore = dl.dataset.lb_ignore
+
+    heads, mious, fw_mious, cat_ious = [], [], [], []
+    f1_scores, macro_f1, micro_f1 = [], [], []
+    logger = logging.getLogger()
+
+    size_processor = SizePreprocessor(
+            cfg.get('eval_start_shape'),
+            cfg.get('eval_start_shortside'),
+            cfg.get('eval_start_longside'),
+            )  # None None None
+
+    color_dict = color_map[cfg.color_dataset]
+    single_scale = MscEvalV0(
+            n_classes=cfg.n_cats,
+            scales=(1., ),
+            flip=False,
+            lb_ignore=lb_ignore,
+            size_processor=size_processor,
+            save_pred=save_pred,
+            save_root=cfg.respth,
+            color_map=color_dict
+    )
+    logger.info('compute single scale metrics')
+    metrics = single_scale(net, dl)
+    heads.append('ss')
+    mious.append(metrics['miou'])
+    fw_mious.append(metrics['fw_miou'])
+    cat_ious.append(metrics['ious'])
+    f1_scores.append(metrics['f1_scores'])
+    macro_f1.append(metrics['macro_f1'])
+    micro_f1.append(metrics['micro_f1'])
+    if save_pred:
+        file_name = os.path.join(cfg.respth, 'ss_data.csv')
+        data_dict = {}
+        data_dict[0] = metrics['miou'] * 100
+        for i in range(len(metrics['ious'])):
+            if metrics['ious'][i] < 1:
+                data_dict[i + 1] = [metrics['ious'][i] * 100]
+            else:
+                data_dict[i + 1] = [metrics['ious'][i]]
+
+        data_dict = pd.DataFrame(data_dict)
+        data_dict.to_csv(file_name, index=False)
+        
+
+    weights = metrics['weights']
+    
+    class_names = CLASSES.get(cfg.color_dataset, None)
+    metric = dict(mious=mious, fw_mious=fw_mious)
+    iou_heads, iou_content = print_res_table('iou', heads,
+            weights, metric, cat_ious, class_names=class_names)
+    metric = dict(macro_f1=macro_f1, micro_f1=micro_f1)
+    f1_heads, f1_content = print_res_table('f1 score', heads,
+            weights, metric, f1_scores, class_names=class_names)
+
+    net.aux_mode = org_aux
+    return metrics['miou'] * 100, iou_heads, iou_content, f1_heads, f1_content
 
 @torch.no_grad()
 def eval_model(cfg, net, save_pred=False):

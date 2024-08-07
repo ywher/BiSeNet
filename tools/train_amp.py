@@ -22,7 +22,7 @@ import torch.cuda.amp as amp
 from lib.models import model_factory
 from configs import set_cfg_from_file, cvt_cfg_dict_to_json
 from lib.data import get_data_loader
-from evaluate import eval_model
+from evaluate import eval_model, eval_model_single_scale
 from lib.ohem_ce_loss import OhemCELoss
 from lib.lr_scheduler import WarmupPolyLrScheduler
 from lib.meters import TimeMeter, AvgMeter
@@ -156,6 +156,7 @@ def train():
         warmup_ratio=0.1, warmup='exp', last_epoch=-1,)
 
     ## train loop
+    best_mIoU = 0
     for it, (im, lb) in enumerate(dl):
         im = im.cuda()
         lb = lb.cuda()
@@ -189,14 +190,19 @@ def train():
         if (it + 1) % cfg.eval_intervals == 0:
             logger.info('\nevaluating the final model')
             # torch.cuda.empty_cache()
-            iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net.module)
+            mIoU, iou_heads, iou_content, f1_heads, f1_content = eval_model_single_scale(cfg, net.module)
             net.module.train()
             logger.info('\neval results of f1 score metric:')
             logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
             logger.info('\neval results of miou metric:')
             logger.info('\n' + tabulate(iou_content, headers=iou_heads, tablefmt='orgtbl'))
+            if mIoU > best_mIoU:
+                best_mIoU = mIoU
+                save_pth = osp.join(cfg.respth, 'model_best.pth')
+                logger.info('\nsave models to {}'.format(save_pth))
+                state = net.module.state_dict()
+                if dist.get_rank() == 0: torch.save(state, save_pth)
             
-        
         lr_schdr.step()
 
     ## dump the final model and evaluate the result
