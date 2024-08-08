@@ -19,6 +19,7 @@ datasets/bev_20234_1024_6cls
 datasets/mapillary
 datasets/HYRoad
 datasets/HYRoad_3cls
+datasets/iphone
 
 
 datasets/cityscapes/leftImg8bit
