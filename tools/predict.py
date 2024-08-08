@@ -87,7 +87,7 @@ class Predictor(object):
     def get_round_size(self, size, divisor=32):
         return [math.ceil(el / divisor) * divisor for el in size]
 
-    def predict_folder(self, dataset, img_folder, out_folder):
+    def predict_folder(self, dataset, img_folder, out_folder, height=-1):
         self.color_map = color_map[dataset]
         
         self.create_folder(out_folder)
@@ -95,6 +95,8 @@ class Predictor(object):
         self.create_folder(trainid_folder)
         color_folder = os.path.join(out_folder, 'color')
         self.create_folder(color_folder)
+        mix_folder = os.path.join(out_folder, 'mix')
+        self.create_folder(mix_folder)
 
         time_meter = AverageMeter()
         
@@ -103,7 +105,10 @@ class Predictor(object):
         image_list.sort()
         for img_name in tqdm(image_list):
             img_path = os.path.join(img_folder, img_name)
+            # [H, W, 3], BGR 2 RGB
             img = cv2.imread(img_path)[:, :, ::-1].copy()
+            if height > 0:
+                img = cv2.resize(img, (int(img.shape[1] * height / img.shape[0]), height))
             pred_start_t = time.time()
             out = self.predict(img)
             time_meter.update(time.time() - pred_start_t)
@@ -111,6 +116,11 @@ class Predictor(object):
             cv2.imwrite(os.path.join(trainid_folder, img_name), out)
             color_out = self.colorize_prediction(out)
             cv2.imwrite(os.path.join(color_folder, img_name), color_out)
+            if img.shape != color_out.shape:
+                img = cv2.resize(img, (color_out.shape[1], color_out.shape[0]))
+            mix_out = cv2.addWeighted(img, 0.5, color_out, 0.5, 0)
+            cv2.imwrite(os.path.join(mix_folder, img_name), mix_out)
+            
         print('Average pred time for each image:', time_meter.avg)
 
     def predict_image(self, img_path, out_folder):
@@ -133,6 +143,7 @@ def get_args():
     args.add_argument('--image_folder', dest='image_folder', type=str, default='datasets/bev_20234_1024/image/val', help='the path to the image to be predicted')
     args.add_argument('--output_folder', dest='output_folder', type=str, default='res/bev_20234_1024_4witers/pred', help='the path to save the output')
     args.add_argument('--dataset', type=str, default='bev_20234')
+    args.add_argument('--height', type=int, default=-1, help='the height of the input image to resize to')
     return args.parse_args()
 
 def main():
@@ -141,7 +152,7 @@ def main():
     # setup_logger(cfg.respth)
 
     predictor = Predictor(args.config, args.weight_path)
-    predictor.predict_folder(args.dataset, args.image_folder, args.output_folder)
+    predictor.predict_folder(args.dataset, args.image_folder, args.output_folder, args.height)
 
 if __name__ == '__main__':
     main()

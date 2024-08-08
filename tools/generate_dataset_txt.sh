@@ -52,7 +52,7 @@
 # done
 
 ### cityscapes
-for split in "train_512" "val_512"
+for split in "train_256" "val_256"
 do
     python generate_dataset_txt.py \
         --dataset "cityscapes" \
