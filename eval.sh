@@ -5,9 +5,9 @@
 
 
 ### bev2024_1024
-CUDA_VISIBLE_DEVICES=0 python tools/evaluate.py \
+CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
 --config configs/bisenetv1_bev20234_1024.py \
---weight-path res/bev_20234_1024_rotate90_2witers/model_final.pth \
+--weight-path res/bev_20234_1024_rotate45_4witers/model_final.pth \
 --save_pred
 
 ### bev2024_1024_6cls

@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 import torch.cuda.amp as amp
+from tensorboardX import SummaryWriter
 
 from lib.models import model_factory
 from configs import set_cfg_from_file, cvt_cfg_dict_to_json
@@ -27,7 +28,7 @@ from lib.losses import OhemCELoss, CE_DiceLoss, LovaszSoftmax
 from lib.lr_scheduler import WarmupPolyLrScheduler
 from lib.meters import TimeMeter, AvgMeter
 from lib.logger import setup_logger, print_log_msg
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 
 ## fix all random seeds
@@ -147,6 +148,8 @@ def train():
         f.write(json.dumps(cfg_dict, indent=4))
         
     logger = logging.getLogger()
+    
+    tensorboard_logger = SummaryWriter(osp.join(cfg.respth, 'tensorboard'))
 
     ## dataset
     dl = get_data_loader(cfg, mode='train')
@@ -197,6 +200,13 @@ def train():
         loss_meter.update(loss.item())
         loss_pre_meter.update(loss_pre.item())
         _ = [mter.update(lss.item()) for mter, lss in zip(loss_aux_meters, loss_aux)]
+        
+        ## tensorboard logging
+        tensorboard_logger.add_scalar('loss', loss.item(), it + 1)
+        tensorboard_logger.add_scalar('loss_pre', loss_pre.item(), it + 1)
+        for i, lss in enumerate(loss_aux):
+            tensorboard_logger.add_scalar(f'loss_aux{i}', lss.item(), it + 1)
+        tensorboard_logger.add_scalar('lr', lr_schdr.get_lr()[0], it + 1)
 
         ## print training log message
         if (it + 1) % 100 == 0:
@@ -215,6 +225,7 @@ def train():
             logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
             logger.info('\neval results of miou metric:')
             logger.info('\n' + tabulate(iou_content, headers=iou_heads, tablefmt='orgtbl'))
+            tensorboard_logger.add_scalar('mIoU', mIoU, it + 1)
             if mIoU > best_mIoU:
                 best_mIoU = mIoU
                 save_pth = osp.join(cfg.respth, 'model_best.pth')
