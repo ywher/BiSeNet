@@ -23,11 +23,11 @@ from lib.models import model_factory
 from configs import set_cfg_from_file, cvt_cfg_dict_to_json
 from lib.data import get_data_loader
 from evaluate import eval_model, eval_model_single_scale
-from lib.ohem_ce_loss import OhemCELoss
+from lib.losses import OhemCELoss, CE_DiceLoss, LovaszSoftmax
 from lib.lr_scheduler import WarmupPolyLrScheduler
 from lib.meters import TimeMeter, AvgMeter
 from lib.logger import setup_logger, print_log_msg
-
+torch.autograd.set_detect_anomaly(True)
 
 
 ## fix all random seeds
@@ -66,10 +66,26 @@ def set_model(lb_ignore=255):
     if cfg.use_sync_bn: net = nn.SyncBatchNorm.convert_sync_batchnorm(net)
     net.cuda()
     net.train()
-    criteria_pre = OhemCELoss(0.7, lb_ignore)
-    criteria_aux = [OhemCELoss(0.7, lb_ignore)
-            for _ in range(cfg.num_aux_heads)]
-    return net, criteria_pre, criteria_aux
+    
+    return net
+
+def set_loss(lb_ignore=255):
+    if cfg.loss_type == 'OhemCELoss':
+        criteria_pre = OhemCELoss(0.7, lb_ignore)
+        criteria_aux = [OhemCELoss(0.7, lb_ignore)
+                for _ in range(cfg.num_aux_heads)]
+    elif cfg.loss_type == 'CE_DiceLoss':
+        criteria_pre = CE_DiceLoss(ignore_index=lb_ignore)
+        criteria_aux = [CE_DiceLoss(ignore_index=lb_ignore)
+                for _ in range(cfg.num_aux_heads)]
+    elif cfg.loss_type == 'LovaszSoftmax':
+        criteria_pre = LovaszSoftmax(ignore_index=lb_ignore)
+        criteria_aux = [LovaszSoftmax(ignore_index=lb_ignore)
+                for _ in range(cfg.num_aux_heads)]
+    else:
+        raise NotImplementedError
+    return criteria_pre, criteria_aux
+    
 
 
 def set_optimizer(model):
@@ -136,7 +152,10 @@ def train():
     dl = get_data_loader(cfg, mode='train')
 
     ## model
-    net, criteria_pre, criteria_aux = set_model(dl.dataset.lb_ignore)
+    net = set_model(dl.dataset.lb_ignore)
+    
+    ## loss
+    criteria_pre, criteria_aux = set_loss(dl.dataset.lb_ignore)
 
     ## optimizer
     optim = set_optimizer(net)

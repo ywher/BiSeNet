@@ -24,5 +24,5 @@ cfg = dict(
     eval_intervals=4000,
     use_fp16=True,
     use_sync_bn=False,
-    respth='./res/city_1024_8witers',
+    respth='./res/bev_20234_1024_rotate_2witers',
 )
