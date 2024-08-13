@@ -15,7 +15,7 @@ def get_argparse():
     args.add_argument('--label_folder', type=str, default='label', help='label folder')
     args.add_argument('--label_suffix', type=str, default='.png', help='label suffix')
     args.add_argument('--split', type=str, default='train', help='train list')
-    args.add_argument('--subfolder', type=bool, default=False, help='whether the images and labels are in subfolders')
+    args.add_argument('--subfolder', action='store_true', default=False, help='whether the images and labels are in subfolders')
     
     return args.parse_args()
 

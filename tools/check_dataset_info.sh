@@ -15,8 +15,11 @@
 # split="train"
 
 ### cityscapes
-data_path="datasets/cityscapes"
-split="val"
+# data_path="datasets/cityscapes"
+# split="val"
+
+data_path="datasets/kyxz"
+split="train"
 
 
 python check_dataset_info.py \

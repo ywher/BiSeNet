@@ -51,19 +51,34 @@
 #         --split ${split}
 # done
 
-### cityscapes
-for split in "train_256" "val_256"
+
+### kyxz
+dataset="kyxz"
+for split in "train" "val"
 do
     python generate_dataset_txt.py \
-        --dataset "cityscapes" \
-        --data_path "datasets/cityscapes" \
-        --image_folder "leftImg8bit" \
-        --image_suffix "_leftImg8bit.png" \
-        --label_folder "gtFine" \
-        --label_suffix "_gtFine_labelTrainIds.png" \
-        --split ${split} \
-        --subfolder True
+        --dataset "${dataset}" \
+        --data_path "datasets/${dataset}" \
+        --image_folder "image" \
+        --image_suffix ".png" \
+        --label_folder "label" \
+        --label_suffix ".png" \
+        --split ${split}
 done
+
+### cityscapes
+# for split in "train_256" "val_256"
+# do
+#     python generate_dataset_txt.py \
+#         --dataset "cityscapes" \
+#         --data_path "datasets/cityscapes" \
+#         --image_folder "leftImg8bit" \
+#         --image_suffix "_leftImg8bit.png" \
+#         --label_folder "gtFine" \
+#         --label_suffix "_gtFine_labelTrainIds.png" \
+#         --split ${split} \
+#         --subfolder True
+# done
 
 ### mapillary
 # for split in "train" "val"
