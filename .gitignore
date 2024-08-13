@@ -20,6 +20,7 @@ datasets/mapillary
 datasets/HYRoad
 datasets/HYRoad_3cls
 datasets/iphone
+datasets/kyxz
 
 
 datasets/cityscapes/leftImg8bit
