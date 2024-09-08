@@ -15,6 +15,7 @@ os.chdir(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from tqdm import tqdm
 import numpy as np
 import cv2
+import time
 import pandas as pd
 
 import torch
@@ -28,6 +29,7 @@ from lib.logger import setup_logger
 from lib.data import get_data_loader
 from utils.color_map import color_map
 from utils.classes import CLASSES
+from utils.util import AverageMeter
 
 
 def get_round_size(size, divisor=32):
@@ -131,7 +133,7 @@ class Metrics(object):
 
 class MscEvalV0(object):
 
-    def __init__(self, n_classes, scales=(0.5, ), flip=False, lb_ignore=255, size_processor=None, save_pred=False, save_root=None, color_map={}):
+    def __init__(self, n_classes, scales=(0.5, ), flip=False, lb_ignore=255, size_processor=None, save_pred=False, save_root=None, color_map={}, test_time=False):
         self.n_classes = n_classes
         self.scales = scales
         self.flip = flip
@@ -140,12 +142,16 @@ class MscEvalV0(object):
         self.metric_observer = Metrics(n_classes, lb_ignore)
         self.save_pred = save_pred
         self.save_root = save_root
+        self.test_time = test_time
         if self.save_pred and self.save_root is not None:
             self.save_root = os.path.join(self.save_root, 'pred')
             self.create_folder(self.save_root)
             self.create_folder(os.path.join(self.save_root, 'trainid'))
             self.create_folder(os.path.join(self.save_root, 'color'))
             self.color_map = color_map
+        if self.test_time:
+            self.time_meter = AverageMeter()
+            
     
     def create_folder(self, out_folder):
         if not os.path.exists(out_folder):
@@ -197,9 +203,10 @@ class MscEvalV0(object):
             N, _, H, W = imgs.shape
             label = label.squeeze(1).cuda()
             size = label.size()[-2:]
-            probs = torch.zeros(
-                    (N, n_classes, *size),
-                    dtype=torch.float32).cuda().detach()
+            probs = torch.zeros((N, n_classes, H, W),dtype=torch.float32).cuda().detach()
+            # probs = torch.zeros(
+            #         (N, n_classes, *size),
+            #         dtype=torch.float32).cuda().detach()
             for scale in self.scales:
                 sH, sW = int(scale * H), int(scale * W)
                 sH, sW = get_round_size((sH, sW))
@@ -207,10 +214,14 @@ class MscEvalV0(object):
                         mode='bilinear', align_corners=True)
 
                 im_sc = im_sc.cuda()
+                start_time = time.time()
                 logits = net(im_sc)[0]
+                ### sample on the predicted logits
                 logits = F.interpolate(logits, size=size,
                         mode='bilinear', align_corners=True)
                 probs += torch.softmax(logits, dim=1)
+                if self.test_time:
+                    self.time_meter.update(time.time() - start_time)
                 if self.flip:
                     im_sc = torch.flip(im_sc, dims=(3, ))
                     logits = net(im_sc)[0]
@@ -219,6 +230,9 @@ class MscEvalV0(object):
                             mode='bilinear', align_corners=True)
                     probs += torch.softmax(logits, dim=1)
             preds = torch.argmax(probs, dim=1)
+            ### sample on the predicted label
+            # preds = F.interpolate(preds.unsqueeze(1).float(), size=size,
+            #         mode='nearest').squeeze(1).long()
             self.metric_observer.update(preds, label)
             
             # save the prediction trainid
@@ -372,7 +386,7 @@ def print_res_table(tname, heads, weights, metric, cat_metric, class_names=None)
     return heads, content
 
 @torch.no_grad()
-def eval_model_single_scale(cfg, net, save_pred=False):
+def eval_model_single_scale(cfg, net, save_pred=False, test_time=False):
     org_aux = net.aux_mode
     net.aux_mode = 'eval'
     net.eval()
@@ -400,7 +414,8 @@ def eval_model_single_scale(cfg, net, save_pred=False):
             size_processor=size_processor,
             save_pred=save_pred,
             save_root=cfg.respth,
-            color_map=color_dict
+            color_map=color_dict,
+            test_time=test_time,
     )
     logger.info('compute single scale metrics')
     metrics = single_scale(net, dl)
@@ -423,6 +438,9 @@ def eval_model_single_scale(cfg, net, save_pred=False):
 
         data_dict = pd.DataFrame(data_dict)
         data_dict.to_csv(file_name, index=False)
+    if test_time:
+        logger.info(f'test time: {single_scale.time_meter.avg}')
+    
         
 
     weights = metrics['weights']
@@ -439,7 +457,7 @@ def eval_model_single_scale(cfg, net, save_pred=False):
     return metrics['miou'] * 100, iou_heads, iou_content, f1_heads, f1_content
 
 @torch.no_grad()
-def eval_model(cfg, net, save_pred=False):
+def eval_model(cfg, net, save_pred=False, test_time=False):
     org_aux = net.aux_mode
     net.aux_mode = 'eval'
     net.eval()
@@ -563,9 +581,10 @@ def eval_model(cfg, net, save_pred=False):
     return iou_heads, iou_content, f1_heads, f1_content
 
 
-def evaluate(cfg, weight_pth, save_pred=False):
+def evaluate(cfg, weight_pth, save_pred=False, test_time=False):
     logger = logging.getLogger()
-
+    logger.info('save pred: {}'.format(save_pred))
+    logger.info('test time: {}'.format(test_time))
     ## model
     logger.info('setup and restore model')
     net = model_factory[cfg.model_type](cfg.n_cats)
@@ -581,7 +600,10 @@ def evaluate(cfg, weight_pth, save_pred=False):
     #      )
 
     ## evaluator
-    iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net, save_pred)
+    if len(cfg.eval_scales) == 1 and cfg.eval_scales[0] == 1.0:
+        miou, iou_heads, iou_content, f1_heads, f1_content = eval_model_single_scale(cfg, net, save_pred, test_time)
+    else:
+        iou_heads, iou_content, f1_heads, f1_content = eval_model(cfg, net, save_pred, test_time)
     logger.info('\neval results of f1 score metric:')
     logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
     logger.info('\neval results of miou metric:')
@@ -593,6 +615,8 @@ def parse_args():
     parse.add_argument('--config', dest='config', type=str, default='configs/bisenetv1_bev2024.py',)
     parse.add_argument('--weight-path', dest='weight_pth', type=str, default='res/bev_2024/model_final.pth',)
     parse.add_argument('--save_pred', action='store_true', default=False)
+    parse.add_argument('--test_time', action='store_true', default=False)
+    parse.add_argument('--up_scale', type=float, default=1.0)
     return parse.parse_args()
 
 
@@ -605,7 +629,7 @@ def main():
         dist.init_process_group(backend='nccl')
     if not osp.exists(cfg.respth): os.makedirs(cfg.respth)
     setup_logger(f'{cfg.model_type}-{cfg.dataset.lower()}-eval', cfg.respth)
-    evaluate(cfg, args.weight_pth, args.save_pred)
+    evaluate(cfg, args.weight_pth, args.save_pred, args.test_time)
 
 
 if __name__ == "__main__":

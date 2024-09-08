@@ -15,10 +15,10 @@ NOTE: replace torchrun with torch.distributed.launch if you use older version of
 # NGPUS=2
 # torchrun --nproc_per_node=$NGPUS --master_port=25001 tools/train_amp.py --config $cfg_file
 
-export CUDA_VISIBLE_DEVICES=0,1
-cfg_file=configs/bisenetv1_kyxz.py
-NGPUS=2
-torchrun --nproc_per_node=$NGPUS --master_port=25001 tools/train_amp.py --config $cfg_file
+# export CUDA_VISIBLE_DEVICES=0,1
+# cfg_file=configs/bisenetv1_kyxz.py
+# NGPUS=2
+# torchrun --nproc_per_node=$NGPUS --master_port=25001 tools/train_amp.py --config $cfg_file
 
 ## bisenetv1 bev_2024_1024_6cls
 # export CUDA_VISIBLE_DEVICES=0,1
@@ -33,10 +33,10 @@ torchrun --nproc_per_node=$NGPUS --master_port=25001 tools/train_amp.py --config
 # torchrun --nproc_per_node=$NGPUS --master_port=25005 tools/train_amp.py --config $cfg_file --finetune-from
 
 ## bisenetv1 cityscapes
-# export CUDA_VISIBLE_DEVICES=0,1
-# cfg_file=configs/bisenetv1_city.py
-# NGPUS=2
-# torchrun --nproc_per_node=$NGPUS tools/train_amp.py --config $cfg_file
+export CUDA_VISIBLE_DEVICES=0,1
+cfg_file=configs/bisenetv1_city_512x1024_2.py
+NGPUS=2
+torchrun --nproc_per_node=$NGPUS tools/train_amp.py --config $cfg_file 2>&1 | tee log.txt
 
 
 ## bisenetv2 cityscapes

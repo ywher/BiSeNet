@@ -15,6 +15,7 @@ from tabulate import tabulate
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 import torch.cuda.amp as amp
@@ -47,6 +48,7 @@ def parse_args():
             default='configs/bisenetv2.py',)
     # parse.add_argument('--finetune-from', type=str, default=None,)
     parse.add_argument('--finetune-from', action='store_true', default=False)
+    parse.add_argument('--local_rank', type=int, default=0,)
     return parse.parse_args()
 
 args = parse_args()
@@ -149,7 +151,8 @@ def train():
         
     logger = logging.getLogger()
     
-    tensorboard_logger = SummaryWriter(osp.join(cfg.respth, 'tensorboard'))
+    if args.local_rank == 0:
+        tensorboard_logger = SummaryWriter(osp.join(cfg.respth, 'tensorboard'))
 
     ## dataset
     dl = get_data_loader(cfg, mode='train')
@@ -182,12 +185,23 @@ def train():
     for it, (im, lb) in enumerate(dl):
         im = im.cuda()
         lb = lb.cuda()
+        # if args.local_rank == 0:
+        #     logger.info(f'original im.shape: {im.shape}, lb.shape: {lb.shape}')
+        if cfg.get('train_im_scale', False):
+            im = F.interpolate(im, scale_factor=cfg.train_im_scale, mode='bilinear', align_corners=True)
+        # if args.local_rank == 0:
+        #     logger.info(f'new im.shape: {im.shape}, lb.shape: {lb.shape}')
 
         lb = torch.squeeze(lb, 1)
 
         optim.zero_grad()
         with amp.autocast(enabled=cfg.use_fp16):
             logits, *logits_aux = net(im)
+            if logits.size()[-2:] != lb.size()[-2:]:
+                logits = F.interpolate(logits, size=lb.size()[-2:], mode='bilinear', align_corners=True)
+            for i in range(len(logits_aux)):
+                if logits_aux[i].size()[-2:] != lb.size()[-2:]:
+                    logits_aux[i] = F.interpolate(logits_aux[i], size=lb.size()[-2:], mode='bilinear', align_corners=True)
             loss_pre = criteria_pre(logits, lb)
             loss_aux = [crit(lgt, lb) for crit, lgt in zip(criteria_aux, logits_aux)]
             loss = loss_pre + sum(loss_aux)
@@ -202,19 +216,18 @@ def train():
         _ = [mter.update(lss.item()) for mter, lss in zip(loss_aux_meters, loss_aux)]
         
         ## tensorboard logging
-        tensorboard_logger.add_scalar('loss', loss.item(), it + 1)
-        tensorboard_logger.add_scalar('loss_pre', loss_pre.item(), it + 1)
-        for i, lss in enumerate(loss_aux):
-            tensorboard_logger.add_scalar(f'loss_aux{i}', lss.item(), it + 1)
-        tensorboard_logger.add_scalar('lr', lr_schdr.get_lr()[0], it + 1)
+        if args.local_rank == 0:
+            tensorboard_logger.add_scalar('loss', loss.item(), it + 1)
+            tensorboard_logger.add_scalar('loss_pre', loss_pre.item(), it + 1)
+            for i, lss in enumerate(loss_aux):
+                tensorboard_logger.add_scalar(f'loss_aux{i}', lss.item(), it + 1)
+            tensorboard_logger.add_scalar('lr', lr_schdr.get_lr()[0], it + 1)
 
         ## print training log message
         if (it + 1) % 100 == 0:
             lr = lr_schdr.get_lr()
             lr = sum(lr) / len(lr)
-            print_log_msg(
-                it, cfg.max_iter, lr, time_meter, loss_meter,
-                loss_pre_meter, loss_aux_meters)
+            print_log_msg(it, cfg.max_iter, lr, time_meter, loss_meter, loss_pre_meter, loss_aux_meters)
         
         if (it + 1) % cfg.eval_intervals == 0:
             logger.info('\nevaluating the final model')
@@ -225,7 +238,8 @@ def train():
             logger.info('\n' + tabulate(f1_content, headers=f1_heads, tablefmt='orgtbl'))
             logger.info('\neval results of miou metric:')
             logger.info('\n' + tabulate(iou_content, headers=iou_heads, tablefmt='orgtbl'))
-            tensorboard_logger.add_scalar('mIoU', mIoU, it + 1)
+            if args.local_rank == 0:
+                tensorboard_logger.add_scalar('mIoU', mIoU, it + 1)
             if mIoU > best_mIoU:
                 best_mIoU = mIoU
                 save_pth = osp.join(cfg.respth, 'model_best.pth')

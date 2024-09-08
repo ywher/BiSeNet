@@ -5,15 +5,15 @@
 
 
 ### bev2024_1024
-CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
---config configs/bisenetv1_bev20234_1024.py \
---weight-path res/bev_20234_1024_rotate45_4witers/model_final.pth \
---save_pred
+# CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
+# --config configs/bisenetv1_bev20234_1024.py \
+# --weight-path res/bev_20234_1024_rotate45_4witers/model_final.pth \
+# --save_pred
 
 ### bev2024_1024_6cls
 # python tools/evaluate.py \
 # --config configs/bisenetv1_bev20234_1024_6cls.py \
-# --weight-path res/bev_20234_1024_6cls_2witers/model_final.pth \
+# --weight-path res/bev_20234_1024_6cls_rotate90_2witers/model_final.pth \
 # --save_pred
 
 
@@ -24,7 +24,13 @@ CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
 # --save_pred
 
 ### cityscapes
-# CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
-# --config configs/bisenetv1_city.py \
-# --weight-path res/city_256_512_8witers/model_final.pth \
-# --save_pred
+config=bisenetv1_city_512x1024
+# config=bisenetv1_city_1024x2048
+res_folder=city_512_1024_8witers
+# res_folder=city_1024_2048_8witers
+CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
+--config configs/${config}.py \
+--weight-path res/${res_folder}/model_final.pth \
+--save_pred \
+--test_time \
+# --up_scale 2.0
