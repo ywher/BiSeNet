@@ -203,10 +203,8 @@ class MscEvalV0(object):
             N, _, H, W = imgs.shape
             label = label.squeeze(1).cuda()
             size = label.size()[-2:]
-            probs = torch.zeros((N, n_classes, H, W),dtype=torch.float32).cuda().detach()
-            # probs = torch.zeros(
-            #         (N, n_classes, *size),
-            #         dtype=torch.float32).cuda().detach()
+            # probs = torch.zeros((N, n_classes, H, W), dtype=torch.float32).cuda().detach()
+            probs = torch.zeros((N, n_classes, *size), dtype=torch.float32).cuda().detach()
             for scale in self.scales:
                 sH, sW = int(scale * H), int(scale * W)
                 sH, sW = get_round_size((sH, sW))
@@ -217,8 +215,7 @@ class MscEvalV0(object):
                 start_time = time.time()
                 logits = net(im_sc)[0]
                 ### sample on the predicted logits
-                logits = F.interpolate(logits, size=size,
-                        mode='bilinear', align_corners=True)
+                logits = F.interpolate(logits, size=size, mode='bilinear', align_corners=True)
                 probs += torch.softmax(logits, dim=1)
                 if self.test_time:
                     self.time_meter.update(time.time() - start_time)
@@ -231,8 +228,7 @@ class MscEvalV0(object):
                     probs += torch.softmax(logits, dim=1)
             preds = torch.argmax(probs, dim=1)
             ### sample on the predicted label
-            # preds = F.interpolate(preds.unsqueeze(1).float(), size=size,
-            #         mode='nearest').squeeze(1).long()
+            # preds = F.interpolate(preds.unsqueeze(1).float(), size=size, mode='nearest').squeeze(1).long()
             self.metric_observer.update(preds, label)
             
             # save the prediction trainid

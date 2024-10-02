@@ -24,10 +24,12 @@
 # --save_pred
 
 ### cityscapes
-config=bisenetv1_city_512x1024
-# config=bisenetv1_city_1024x2048
-res_folder=city_512_1024_8witers
-# res_folder=city_1024_2048_8witers
+# config=bisenetv1_city_512x1024
+# config=bisenetv1_city_512x1024_2
+config=bisenetv1_city_1024x2048
+# res_folder=city_512_1024_8witers
+# res_folder=city_512_1024_2_8witers
+res_folder=city_1024_2048_8witers
 CUDA_VISIBLE_DEVICES=1 python tools/evaluate.py \
 --config configs/${config}.py \
 --weight-path res/${res_folder}/model_final.pth \
